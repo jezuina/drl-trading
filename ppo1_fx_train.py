@@ -15,11 +15,11 @@ from utils.enums import compute_indicators, compute_reward, compute_position, lo
  
 settings =	{
     # env
-    #   'data_file':    'fxcm_11_H4_2015_2018_train_with_dates_6300.h5',
-    'data_file':    'fxcm_XXXUSD_H4_2015_2019_train_5990.h5',
+    'data_file':    'fxcm_EURUSD_H1_2018_2019_train_10558.h5',
+    #   'data_file':    'fxcm_XXXUSD_H4_2015_2019_train_5990.h5',
     'output_file':     None,
     'strategy_name':    'Strategy',
-    'total_steps':  3000,
+    'total_steps':  5000,
     'window_length': 1,
     'capital_base': 1e4,
     'lot_size': lot_size.Mini,
@@ -40,7 +40,8 @@ settings =	{
     'clip_obs': 10.,
     'clip_reward':  10.,
     # model
-    'model_name':   'fxcm_XXXUSD_H4_2015_2019_train_5990_ppo1'
+    'model_name':   'fxcm_EURUSD_H1_2018_2019_train_10558_ppo1'
+    #   'model_name':   'fxcm_XXXUSD_H4_2015_2019_train_5990_ppo1'
 }
 
 
