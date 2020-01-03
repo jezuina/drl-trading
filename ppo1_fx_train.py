@@ -8,7 +8,7 @@ import uuid
 from stable_baselines.common.policies import MlpPolicy, MlpLstmPolicy, MlpLnLstmPolicy, CnnPolicy, CnnLstmPolicy, CnnLnLstmPolicy,  ActorCriticPolicy, LstmPolicy, FeedForwardPolicy
 from stable_baselines.common.vec_env import DummyVecEnv, VecNormalize
 from stable_baselines import PPO1
-from envs.env_fx_long import PortfolioEnv
+from envs.pf_fx_env import PortfolioEnv
 from utils.globals import EPS, MODELS_DIR
 from utils.enums import compute_indicators, compute_reward, compute_position, lot_size
 
@@ -20,20 +20,18 @@ settings =	{
     'output_file':     None,
     'strategy_name':    'Strategy',
     'total_steps':  3000,
-    'window_length': 10,
+    'window_length': 1,
     'capital_base': 1e4,
     'lot_size': lot_size.Mini,
     'leverage':  0.01,
     'commission_percent': 0.0,
     'commission_fixed': 0.0,
     'max_slippage_percent': 0.1,
-    'start_date':   '2002-01-01',
-    'end_date': None,
     'start_idx':  None,
-    'min_start_idx': 100,
-    'compute_indicators':  compute_indicators.returns, 
-    'add_noise':    False,
-    'debug':    False,
+    'compute_indicators': compute_indicators.returns,  #   
+    'compute_reward': compute_reward.profit,   #   profit   sharpe  sortino  max_drawdown   calmar   omega   downside risk
+    'compute_position': compute_position.long_and_short, #   long_only    short_only  long_and_short  add long/short bias for stocks
+    'debug': False,
     # agnet
     'total_timestamp':  1000000, #
     # vectorized normalized env
@@ -56,13 +54,12 @@ def ppo1_train():
     
     # best parames fxcm_11_H4_full_2015_2018_train_6300
          
-    v_policy = MlpPolicy  #   policies = [MlpPolicy, LnMlpPolicy, CustomSACPolicy]
+    v_policy = MlpPolicy  #   policies = [MlpPolicy, MlpLstmPolicy, MlpLnLstmPolicy]
     v_gamma = 0.99  #  default 0.99
     v_learning_rate = 0.0003   #  default 0.0003
     v_ent_coef = 'auto'   #  default 'auto'
-        
-    
-    v_env = PortfolioEnv(settings['data_file'],settings['output_file'],settings['strategy_name'],settings['total_steps'],settings['window_length'],settings['capital_base'],settings['lot_size'],settings['leverage'],settings['commission_percent'],settings['commission_fixed'],settings['max_slippage_percent'],settings['start_date'],settings['end_date'],settings['start_idx'],settings['min_start_idx'],settings['compute_indicators'],settings['add_noise'],settings['debug'])   
+         
+    v_env = PortfolioEnv(settings['data_file'],settings['output_file'],settings['strategy_name'],settings['total_steps'],settings['window_length'],settings['capital_base'],settings['lot_size'],settings['leverage'],settings['commission_percent'],settings['commission_fixed'],settings['max_slippage_percent'],settings['start_idx'],settings['compute_indicators'],settings['compute_reward'],settings['compute_position'],settings['debug'])   
     #   Create the vectorized environment
     #   v_env = DummyVecEnv([lambda: v_env])
     #   Normalize environment

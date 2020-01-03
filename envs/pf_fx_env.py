@@ -20,7 +20,7 @@ from utils.globals import EPS, DATASETS_DIR, OUTPUTS_DIR, CAPITAL_BASE_MULTIPLIE
 from utils.enums import compute_indicators, compute_reward, compute_position, lot_size, account_currency
 from utils.data import read_h5_fx_history, read_csv_history
 from utils.math import my_round, sum_abs, log_negative, log_negative_on_array 
-from features.ta import get_indicators_none, get_indicators_returns, get_indicators_default, get_indicators_all, get_indicators_patterns, get_indicators_rsi
+from features.ta import get_indicators_returns
 
 
 class PortfolioEnv(gym.Env):
@@ -36,13 +36,10 @@ class PortfolioEnv(gym.Env):
                  commission_percent=0.0,
                  commission_fixed=5,
                  max_slippage_percent=0.05,
-                 start_date='2000-01-01',
-                 end_date=None,
                  start_idx=None,
                  compute_indicators=compute_indicators.returns,  #   none  default  all   returns   ptr  rsi
                  compute_reward=compute_reward.profit,   #   profit   sharpe  sortino  max_drawdown   calmar   omega   downside risk
                  compute_position=compute_position.long_only, #   long_only    short_only  long_short  add long/short bias for stocks
-                 add_noise=False,
                  debug = False
                  ):
 
@@ -61,20 +58,12 @@ class PortfolioEnv(gym.Env):
         self.commission_percent = commission_percent / 100
         self.commission_fixed = commission_fixed
         self.max_slippage_percent = max_slippage_percent
-        self.start_date = start_date
-        self.end_date = end_date
         self.start_idx = start_idx
         self.window_length = window_length
         self.compute_indicators = compute_indicators
         self.compute_reward = compute_reward
         self.compute_position = compute_position
-        self.add_noise = add_noise
         self.debug = debug
-
-        if add_noise == True:
-            mu, sigma = 0, 0.1 
-        else:
-            mu, sigma = 0, 0
 
         self.instruments, self.price_history, self.tech_history = self._init_market_data()
         self.number_of_instruments = len(self.instruments)
@@ -102,7 +91,6 @@ class PortfolioEnv(gym.Env):
         self.action_space = spaces.Box(-1, 1, shape=(len(self.instruments) + 1,), dtype=np.float32)
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=(len(self.instruments), window_length, self.tech_data.shape[-1]), dtype=np.float32)
         
-        self.noise = np.random.normal(mu, sigma, self.observation_space.shape) 
         self.action_sample = self.action_space.sample()
 
         self.seed()
@@ -485,66 +473,16 @@ class PortfolioEnv(gym.Env):
     def _init_market_data(self):
         data, bid, ask, instruments = read_h5_fx_history(filepath=self.datafile, replace_zeros=True)
           
-        if self.compute_indicators is compute_indicators.none:
+        if self.compute_indicators is compute_indicators.returns:
             new_data = np.zeros((0,0,0),dtype=np.float32)
             for i in range(data.shape[0]):
                 security = pd.DataFrame(data[i, :, :]).fillna(method='ffill').fillna(method='bfill')
-                security.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'weekday', 'hour']
-                tech_data = np.asarray(get_indicators_none(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume', weekday_name='weekday', hour_name='hour'))
+                security.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+                tech_data = np.asarray(get_indicators_returns(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume'))
                 new_data = np.resize(new_data, (new_data.shape[0]+1, tech_data.shape[0], tech_data.shape[1]))
                 new_data[i] = tech_data    
-            price_history = new_data[:,:,:7]
-            tech_history = new_data[:,:,:7]
-        elif self.compute_indicators is compute_indicators.default:
-            new_data = np.zeros((0,0,0),dtype=np.float32)
-            for i in range(data.shape[0]):
-                security = pd.DataFrame(data[i, :, :]).fillna(method='ffill').fillna(method='bfill')
-                security.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'weekday', 'hour']
-                tech_data = np.asarray(get_indicators_default(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume', weekday_name='weekday', hour_name='hour'))
-                new_data = np.resize(new_data, (new_data.shape[0]+1, tech_data.shape[0], tech_data.shape[1]))
-                new_data[i] = tech_data    
-            price_history = new_data[:,:,:7]
-            tech_history = new_data[:,:,7:]
-        elif self.compute_indicators is compute_indicators.all:
-            new_data = np.zeros((0,0,0),dtype=np.float32)
-            for i in range(data.shape[0]):
-                security = pd.DataFrame(data[i, :, :]).fillna(method='ffill').fillna(method='bfill')
-                security.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'weekday', 'hour']
-                tech_data = np.asarray(get_indicators_all(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume', weekday_name='weekday', hour_name='hour'))
-                new_data = np.resize(new_data, (new_data.shape[0]+1, tech_data.shape[0], tech_data.shape[1]))
-                new_data[i] = tech_data    
-            price_history = new_data[:,:,:7]
-            tech_history = new_data[:,:,7:]
-        elif self.compute_indicators is compute_indicators.returns:
-            new_data = np.zeros((0,0,0),dtype=np.float32)
-            for i in range(data.shape[0]):
-                security = pd.DataFrame(data[i, :, :]).fillna(method='ffill').fillna(method='bfill')
-                security.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'weekday', 'hour']
-                tech_data = np.asarray(get_indicators_returns(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume', weekday_name='weekday', hour_name='hour'))
-                new_data = np.resize(new_data, (new_data.shape[0]+1, tech_data.shape[0], tech_data.shape[1]))
-                new_data[i] = tech_data    
-            price_history = new_data[:,:,:7]
-            tech_history = new_data[:,:,7:]
-        elif self.compute_indicators is compute_indicators.ptr:
-            new_data = np.zeros((0,0,0),dtype=np.float32)
-            for i in range(data.shape[0]):
-                security = pd.DataFrame(data[i, :, :]).fillna(method='ffill').fillna(method='bfill')
-                security.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'weekday', 'hour']
-                tech_data = np.asarray(get_indicators_patterns(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume', weekday_name='weekday', hour_name='hour'))
-                new_data = np.resize(new_data, (new_data.shape[0]+1, tech_data.shape[0], tech_data.shape[1]))
-                new_data[i] = tech_data    
-            price_history = new_data[:,:,:7]
-            tech_history = new_data[:,:,7:]
-        elif self.compute_indicators is compute_indicators.rsi:
-            new_data = np.zeros((0,0,0),dtype=np.float32)
-            for i in range(data.shape[0]):
-                security = pd.DataFrame(data[i, :, :]).fillna(method='ffill').fillna(method='bfill')
-                security.columns = ['Open', 'High', 'Low', 'Close', 'Volume', 'weekday', 'hour']
-                tech_data = np.asarray(get_indicators_rsi(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume', weekday_name='weekday', hour_name='hour'))
-                new_data = np.resize(new_data, (new_data.shape[0]+1, tech_data.shape[0], tech_data.shape[1]))
-                new_data[i] = tech_data    
-            price_history = new_data[:,:,:7]
-            tech_history = new_data[:,:,7:]
+            price_history = new_data[:,:,:5]
+            tech_history = new_data[:,:,5:]
             
         #   print(price_history)    
         #   print(tech_history)    
