@@ -1,3 +1,4 @@
-Convert pip value, margins, currencies to account currrency (USD) https://www.xm.com/forex-calculators/all-in-one
-Check logic, rebalance, reward, short trade
+Convert pip value, margins, currencies to account currrency (USD) check against: https://www.xm.com/forex-calculators/all-in-one
+Check and fix code logic: rebalance, reward, short trade 
 Add real-time trading support using trained model
+Convert everything to managed aws service sagemaker to train, test and deploy in the cloud
