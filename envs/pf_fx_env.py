@@ -430,44 +430,49 @@ class PortfolioEnv(gym.Env):
         return np.concatenate((state, self.current_weights[:-1][:, None]), axis=1)
 
     #   instruments = ['EUR/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD',  'GBP/USD', 'NZD/USD', 'GBP/JPY', 'EUR/JPY', 'AUD/JPY', 'EUR/GBP', 'USD/CHF']
-    def _calculate_pip_value_in_account_currency(self, currency, current_prices):
+    def _calculate_pip_value_in_account_currency(self, currency, current_prices):        
         pip_values = []
+        
+        #dictionary to keep prices for each currency, assuming that current_prices has prices in the same order as instruments list has instument names
+        prices_for_currency = {}
+        
+        instrument_index = 0
+        for instrument in self.instruments:
+            prices_for_currency[instrument] = current_prices[instrument_index]
+            instrument_index += 1
+            
+            
+        #account currency is USD
         if currency == account_currency.USD:
-            m = 0
-            print(self.instruments)
-            for instrument in self.instruments:
-                print(instrument)
-                if instrument == 'EUR/USD':
-                    EUR_USD = current_prices[m]
-                elif instrument == 'USD/JPY':
-                    USD_JPY = current_prices[m]
-                elif instrument == 'AUD/USD':
-                    AUD_USD = current_prices[m]
-                elif instrument == 'GBP/USD':
-                    GBP_USD = current_prices[m]
-                
+            m = 0            
+            for instrument in self.instruments:                                               
                 first_currency = instrument[0:3]
-                second_currency = instrument[3:6]
-                print(first_currency + ' ' + second_currency)
-                
+                second_currency = instrument[4:7]
+                                
+                #counter currency same as account currency
                 if second_currency == 'USD':
                     pip_value = 0.0001
-                elif first_currency == 'USD' and second_currency != 'JPY':
-                    pip_value = 0.0001/current_prices[m]
-                elif first_currency == 'USD' and second_currency == 'JPY':
-                    pip_value = 0.01/current_prices[m]    
-                elif instrument == 'GBP/JPY':
-                    pip_value = GBP_USD * 0.01/current_prices[m] 
-                elif instrument == 'EUR/JPY':
-                    pip_value = EUR_USD * 0.01/current_prices[m] 
-                elif instrument == 'AUD/JPY':
-                    pip_value = AUD_USD * 0.01/current_prices[m] 
-                elif instrument == 'EUR/GBP':
-                    pip_value = EUR_USD * 0.0001/current_prices[m] 
-
+                #base currency same as account currency    
+                elif first_currency == 'USD':
+                    #counter currency is not JPY
+                    if second_currency != 'JPY':
+                        pip_value = 0.0001/current_prices[m]
+                    #counter currency is JPY
+                    else: pip_value = 0.01/current_prices[m] 
+                #none of the currency pair is the same as account currency
+                #is needed the currency rate for the base currency/account currency
+                else:
+                    ##base currency/account currency rate is retrieved from stored values in dictionary
+                    base_account_rate = prices_for_currency[first_currency+"/USD"]
+                    
+                    if second_currency == 'JPY':
+                        pip_value = base_account_rate * 0.01/current_prices[m]
+                    else: pip_value = base_account_rate * 0.0001/current_prices[m] 
+                        
                 pip_values.append(pip_value)
                 m += 1    
 
+        
         return pip_values 
 
     def _init_market_data(self):
@@ -476,7 +481,7 @@ class PortfolioEnv(gym.Env):
         if self.compute_indicators is compute_indicators.returns:
             new_data = np.zeros((0,0,0),dtype=np.float32)
             for i in range(data.shape[0]):
-                security = pd.DataFrame(data[i, :, :]).fillna(method='ffill').fillna(method='bfill')
+                security = pd.DataFrame(data[i, :, 0:5]).fillna(method='ffill').fillna(method='bfill')
                 security.columns = ['Open', 'High', 'Low', 'Close', 'Volume']
                 tech_data = np.asarray(get_indicators_returns(security=security.astype(float), open_name='Open', high_name='High', low_name='Low', close_name='Close', volume_name='Volume'))
                 new_data = np.resize(new_data, (new_data.shape[0]+1, tech_data.shape[0], tech_data.shape[1]))
