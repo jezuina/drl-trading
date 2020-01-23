@@ -93,6 +93,11 @@ class PortfolioEnv(gym.Env):
         
         self.action_sample = self.action_space.sample()
 
+        print('action sample shape {}', self.action_sample.shape)
+        print('action shape {}', self.action_sample)
+        print('obseravtion spase shape {}', self.observation_space.shape)
+        print('obseravtion spase shape', self.observation_space)
+        
         self.seed()
 
     def seed(self, seed=None):
@@ -127,6 +132,7 @@ class PortfolioEnv(gym.Env):
     def step(self, action):
         np.testing.assert_almost_equal(action.shape, (len(self.instruments) + 1,))
 
+        
         # normalise just in case
         if self.compute_position == compute_position.long_only:
             weights = np.clip(action, 0, 1)
@@ -135,6 +141,7 @@ class PortfolioEnv(gym.Env):
         elif self.compute_position == compute_position.long_and_short:
             weights = np.clip(action, -1, 1)
 
+           
         '''
         print(action)
         print(weights)
@@ -148,14 +155,15 @@ class PortfolioEnv(gym.Env):
             weights[:] = 0
             weights[-1] = 1
         
+        
         np.testing.assert_almost_equal(sum_abs(weights), 1.0, 3, 'absolute weights should sum to 1. weights=%s' %weights)
        
         if self.compute_position == compute_position.long_only:
             assert((weights >= 0) * (weights <= 1)).all(), 'all weights values should be between 0 and 1. Not %s' %weights
         elif self.compute_position == compute_position.short_only:
-            assert((weights >= -1) * (weights <= 0)).all(), 'all weights values should be between -1 and 0. Not %s' %weights
+            assert((weights[0:-1] >= -1) * (weights[0:-1] <= 0) * (weights[-1] >=0) * (weights[-1] <=1)).all(), 'all weights values should be between -1 and 0. Not %s' %weights
         elif self.compute_position == compute_position.long_and_short:
-            assert((weights >= -1) * (weights <= 1)).all(), 'all weights values should be between -1 and 1. Not %s' %weights
+            assert((weights[0:-1] >= -1) * (weights[0:-1] <= 1) * (weights[-1] >=0) * (weights[-1] <=1) ).all(), 'all weights values should be between -1 and 1. Not %s' %weights
  
         self.weights.append(weights)
     
@@ -281,10 +289,11 @@ class PortfolioEnv(gym.Env):
 
 
     def _rebalance(self, weights, current_prices):
+        
         target_weights = weights
         target_values = np.sum(self.current_portfolio_values) * target_weights
         
-        #   target_positions = (1/self.leverage) * np.floor(target_values[:-1] / current_prices)
+        #target_positions = (1/self.leverage) * np.floor(target_values[:-1] / current_prices)
         #   target_positions = np.floor(target_values[:-1] / current_prices)
         
         current_margins = self.lot_size * self.leverage * current_prices * RISK

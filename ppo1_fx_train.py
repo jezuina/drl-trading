@@ -15,12 +15,13 @@ from utils.enums import compute_indicators, compute_reward, compute_position, lo
  
 settings =	{
     # env
-    'data_file':    'fxcm_EURUSD_H1_2018_2019_train_10558.h5',
+    #'data_file':    'fxcm_EURUSD_H1_2018_2019_train_10558.h5',
     #   'data_file':    'fxcm_XXXUSD_H4_2015_2019_train_5990.h5',
+       'data_file':    'fxcm_11_H4_2015_2018_train_with_dates_6300.h5',
     'output_file':     None,
     'strategy_name':    'Strategy',
     'total_steps':  5000,
-    'window_length': 1,
+    'window_length': 7,
     'capital_base': 1e4,
     'lot_size': lot_size.Mini,
     'leverage':  0.01,
@@ -30,7 +31,7 @@ settings =	{
     'start_idx':  None,
     'compute_indicators': compute_indicators.returns,  #   
     'compute_reward': compute_reward.profit,   #   profit   sharpe  sortino  max_drawdown   calmar   omega   downside risk
-    'compute_position': compute_position.long_and_short, #   long_only    short_only  long_and_short  add long/short bias for stocks
+    'compute_position': compute_position.short_only, #   long_only    short_only  long_and_short  add long/short bias for stocks
     'debug': False,
     # agnet
     'total_timestamp':  1000000, #
